@@ -1,0 +1,1 @@
+import{AuthLockScreen}from'./components/lock-screen.js';export const authRoutes={'/auth/login':()=>{return new AuthLockScreen();}};

@@ -1,0 +1,1 @@
+export default{"macro_p":"P:","macro_c":"G:","macro_f":"L:"};

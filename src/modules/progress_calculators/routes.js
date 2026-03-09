@@ -1,0 +1,1 @@
+import'./views/fat-calculator.js';export const progressCalculatorsRoutes={'/progress/calculator':()=>document.createElement('progress-fat-calculator')};

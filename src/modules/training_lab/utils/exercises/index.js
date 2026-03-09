@@ -1,0 +1,1 @@
+import{SquatLogic}from'./squat.js';import{BenchLogic}from'./bench.js';import{DeadliftLogic}from'./deadlift.js';const EXERCISE_REGISTRY={'squat':SquatLogic,'bench':BenchLogic,'deadlift':DeadliftLogic};export const getExerciseLogic=(exerciseId)=>{return EXERCISE_REGISTRY[exerciseId]||EXERCISE_REGISTRY['squat'];};

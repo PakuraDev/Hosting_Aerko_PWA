@@ -1,0 +1,1 @@
+export default{"card_default_label":"Aliment","aria_edit":"Modifier","aria_delete":"Supprimer"};

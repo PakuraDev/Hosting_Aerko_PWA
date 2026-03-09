@@ -1,0 +1,1 @@
+export default{"core_feedback_strength":"¡Cuánta fuerza! Buen levantamiento.","core_feedback_cardio":"Has hecho muchas repeticiones, pero buen trabajo <3"};

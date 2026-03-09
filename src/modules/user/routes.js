@@ -1,0 +1,1 @@
+import'./views/home.js';import{MenuView}from'./views/menu.js';export const userRoutes={'/':()=>document.createElement('user-home'),'/menu':MenuView,'/profile':()=>{return'<div class="app-screen"><h1 class="text-h1" style="color:var(--Verde-acido); padding:24px;">Profile_</h1><app-nav style="position:fixed;bottom:0;width:100%"></app-nav></div>';}};

@@ -1,0 +1,1 @@
+export default{"trigger_default_label":"Ajouter_Aliment"};

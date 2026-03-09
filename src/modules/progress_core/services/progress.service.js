@@ -1,0 +1,10 @@
+import{db}from'../../../core/db/index.js';import{bus}from'../../../core/bus/index.js';import{userService}from'../../user/services/user.service.js';import{progressStore}from'../store/index.js';import{i18nService}from'../../../core/i18n/i18n.service.js';const VAULT_NAME='progress_vault';const RECORDS_KEY='user_progress_history';class ProgressService{constructor(){this.isReady=false;}
+async init(){if(this.isReady)return true;console.log('[PROGRESS] Abriendo la bóveda de progreso...');try{const record=await db.get(VAULT_NAME,RECORDS_KEY);if(record&&record.data){progressStore.setRecords(record.data);}else{progressStore.setRecords([]);}
+this.isReady=true;console.log(`[PROGRESS] Listo. Registros cargados: ${progressStore.getRecords().length}`);return true;}catch(error){console.error('[PROGRESS] Error crítico al inicializar:',error);return false;}}
+canAddRecord(){const records=progressStore.getRecords();if(records.length===0)return true;const appMode=i18nService.getPreferences().mode;const cooldownMs=appMode==='b'?7*24*60*60*1000:20*60*60*1000;const lastRecordTime=records[0].timestamp;const timePassed=Date.now()-lastRecordTime;return timePassed>=cooldownMs;}
+async addRecord(data){if(!this.canAddRecord()){console.warn('[PROGRESS] ¡Quieto ahí! Cooldown activo. No se puede guardar todavía.');return null;}
+const newRecord={id:`PRG_${Date.now()}`,timestamp:Date.now(),...data};progressStore.addRecord(newRecord);if(typeof progressStore.clearDraft==='function'){progressStore.clearDraft();}
+await this._syncToDB();console.log(`[PROGRESS] Nuevo registro guardado: ${newRecord.id}`);const bioUpdates={};if(data.weight)bioUpdates.weight=data.weight;if(data.bodyFat)bioUpdates.bodyFat=data.bodyFat;if(Object.keys(bioUpdates).length>0){console.log('[PROGRESS] Detectados datos transversales. Notificando al Kernel...');await userService.updateBiometrics(bioUpdates);}
+bus.emit('PROGRESS_RECORD_ADDED',newRecord);return newRecord;}
+async _syncToDB(){const records=progressStore.getRecords();await db.put(VAULT_NAME,{id:RECORDS_KEY,data:records});}}
+export const progressService=new ProgressService();

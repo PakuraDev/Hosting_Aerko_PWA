@@ -1,0 +1,1 @@
+import'./views/record-add.js';import'./views/record-measures.js';import'./views/record-folds.js';export const progressEntryRoutes={'/progress/add':()=>document.createElement('progress-record-add'),'/progress/add/measures':()=>document.createElement('progress-record-measures'),'/progress/add/folds':()=>document.createElement('progress-record-folds')};

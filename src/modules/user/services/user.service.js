@@ -1,0 +1,8 @@
+import{db}from'../../../core/db/index.js';import{bus}from'../../../core/bus/index.js';import{DEFAULT_SHORTCUTS}from'../shortcut.registry.js';const VAULT='user_vault';const BIOMETRICS_KEY='biometrics';const SHORTCUTS_KEY='home_shortcuts';class UserService{constructor(){this._profile=null;this._shortcuts=null;}
+async init(){try{const record=await db.get(VAULT,BIOMETRICS_KEY);if(record){this._profile=record.data;console.log('[USER] Biometrics loaded into RAM.');}else{console.log('[USER] No biometrics found (New user).');this._profile={};}
+const shortcutsRecord=await db.get(VAULT,SHORTCUTS_KEY);if(shortcutsRecord&&shortcutsRecord.data){this._shortcuts=shortcutsRecord.data;console.log('[USER] Shortcuts loaded into RAM.');}else{console.log('[USER] No custom shortcuts found. Using defaults.');this._shortcuts=[...DEFAULT_SHORTCUTS];}}catch(e){console.error('[USER] Failed to load user data:',e);}}
+getProfile(){return this._profile||{};}
+getShortcuts(){return this._shortcuts||[...DEFAULT_SHORTCUTS];}
+async updateBiometrics(newData){const updatedProfile={...this._profile,...newData};this._profile=updatedProfile;await db.put(VAULT,{id:BIOMETRICS_KEY,data:updatedProfile});bus.emit('USER_UPDATED',updatedProfile);console.log('%c[USER] Biometrics Updated & Broadcasted','color: #BEFF00',updatedProfile);}
+async updateShortcuts(newShortcuts){this._shortcuts=newShortcuts;await db.put(VAULT,{id:SHORTCUTS_KEY,data:newShortcuts});bus.emit('SHORTCUTS_UPDATED',newShortcuts);console.log('%c[USER] Shortcuts Updated','color: #BEFF00',newShortcuts);}}
+export const userService=new UserService();

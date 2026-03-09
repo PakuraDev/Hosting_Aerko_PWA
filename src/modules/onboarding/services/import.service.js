@@ -1,0 +1,9 @@
+import{db}from'../../../core/db/index.js';import{cryptoService}from'../../../core/crypto/index.js';import{authService}from'../../auth/services/auth.service.js';class ImportService{async importAerkoBackup(file){const text=await this._readFile(file);let backupData;try{backupData=JSON.parse(text);}catch(e){throw new Error("err_json_corrupt");}
+const config=await authService._getConfig();const isSecurityEnabled=config.security_enabled;const protectedVaults=config.protected_vaults||[];if(isSecurityEnabled&&protectedVaults.length>0&&!cryptoService.key){throw new Error("err_system_locked");}
+for(const vaultName of Object.keys(backupData)){const records=backupData[vaultName];if(!Array.isArray(records))continue;const isVaultProtected=isSecurityEnabled&&protectedVaults.includes(vaultName);for(const record of records){if(!record.id)continue;let recordToSave;if(isVaultProtected){const payload=record.data!==undefined?record.data:this._extractPayload(record);const encryptedData=await cryptoService.encrypt(payload);recordToSave={id:record.id,data:encryptedData};}else{if(record.data!==undefined&&Object.keys(record).length===2){recordToSave={id:record.id,...record.data};}else{recordToSave={...record};}}
+await db.put(vaultName,recordToSave);}
+console.log(`%c[IMPORT] Bóveda '${vaultName}' inyectada con éxito.`,'color: #CCFF00');}
+return true;}
+_readFile(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=e=>resolve(e.target.result);reader.onerror=()=>reject(new Error("Error de lectura del sistema de archivos."));reader.readAsText(file);});}
+_extractPayload(record){const{id,...rest}=record;return rest;}}
+export const importService=new ImportService();

@@ -1,0 +1,1 @@
+export default{"log_init":"Initialisation du système...","log_pwd_req":"mot de passe requis..."};

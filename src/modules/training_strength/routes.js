@@ -1,0 +1,1 @@
+import'./views/calculator.js';export const trainingStrengthRoutes={'/training/1rm':()=>document.createElement('training-strength-calculator')};

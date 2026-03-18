@@ -228,15 +228,136 @@ render(){this.innerHTML=`
                 </footer>
             </div>
         `;}
-_attachListeners(){const modal=this.querySelector('#progress-modal');this.sequence.forEach(fieldKey=>{const box=this.querySelector(`#box-${fieldKey}`);if(box){box.addEventListener('click',()=>{this._openModalForField(fieldKey,modal);});}});const uploadBox=this.querySelector('#upload-box');const fileInput=this.querySelector('#photo-input');if(uploadBox&&fileInput){uploadBox.addEventListener('click',()=>fileInput.click());fileInput.addEventListener('change',(e)=>{const file=e.target.files[0];if(!file)return;const reader=new FileReader();reader.onload=(event)=>{const base64String=event.target.result;this.data.photo.value=base64String;progressStore.updateDraft({photo:this.data.photo});this._updateUI();this._checkCanSave();};reader.readAsDataURL(file);});}
-this.querySelector('#btn-go-measures')?.addEventListener('click',()=>{router.navigate('/progress/add/measures');});this.querySelector('#btn-go-folds')?.addEventListener('click',()=>{router.navigate('/progress/add/folds');});this.querySelector('#btn-save')?.addEventListener('click',()=>this._handleSave());}
-async _openModalForField(fieldKey,modal){const fieldData=this.data[fieldKey];const result=await modal.open(fieldData.label,fieldData.value,'dynamic',fieldData.unit,fieldData.options,(newUnit)=>{this.querySelector(`#unit-${fieldKey}`).setAttribute('value',newUnit);this.data[fieldKey].unit=newUnit;progressStore.updateDraft({[fieldKey]:this.data[fieldKey]});});if(result){const cleanValue=(result.value==="0"||result.value==="")?"":result.value;this.data[fieldKey].value=cleanValue;this.data[fieldKey].unit=result.unit;progressStore.updateDraft({[fieldKey]:this.data[fieldKey]});this._updateUI();this._checkCanSave();}}
-_updateUI(){Object.keys(this.data).forEach(key=>{if(key==='photo')return;const field=this.data[key];const valSpan=this.querySelector(`#val-${key}`);const unitToggle=this.querySelector(`#unit-${key}`);if(valSpan){valSpan.innerText=field.value!==""?field.value:"0";valSpan.style.opacity=field.value!==""?"1":"0.3";}
-if(unitToggle){unitToggle.setAttribute('options',field.options);unitToggle.setAttribute('value',field.unit);}});const uploadBox=this.querySelector('#upload-box');if(uploadBox){if(this.data.photo.value){uploadBox.classList.add('has-image');uploadBox.innerHTML=`<img src="${this.data.photo.value}" class="photo-preview" alt="Preview">`;}else{uploadBox.classList.remove('has-image');uploadBox.innerHTML=`
-                    <div class="upload-icon">${ICONS.UPLOAD_CLOUD}</div>
-                    <h3 class="upload-title">${this.dict.t('record_add_photo_title')}</h3>
-                    <p class="upload-desc">${this.dict.t('record_add_photo_desc')}</p>
-                `;}}}
+_attachListeners() {
+    const modal = this.querySelector('#progress-modal');
+    
+    // Configurar clicks para los cuadros de datos (Peso, Grasa, etc.)
+    this.sequence.forEach(fieldKey => {
+        const box = this.querySelector(`#box-${fieldKey}`);
+        if (box) {
+            box.addEventListener('click', () => {
+                this._openModalForField(fieldKey, modal);
+            });
+        }
+    });
+
+    // Configurar subida de foto
+    const uploadBox = this.querySelector('#upload-box');
+    const fileInput = this.querySelector('#photo-input');
+    if (uploadBox && fileInput) {
+        uploadBox.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64String = event.target.result;
+                this.data.photo.value = base64String;
+                progressStore.updateDraft({ photo: this.data.photo });
+                this._updateUI();
+                this._checkCanSave();
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Botones de navegación y guardado
+    this.querySelector('#btn-go-measures')?.addEventListener('click', () => {
+        router.navigate('/progress/add/measures');
+    });
+    this.querySelector('#btn-go-folds')?.addEventListener('click', () => {
+        router.navigate('/progress/add/folds');
+    });
+    this.querySelector('#btn-save')?.addEventListener('click', () => this._handleSave());
+}
+
+async _openModalForField(fieldKey, modal) {
+    const fieldData = this.data[fieldKey];
+    
+    const result = await modal.open(
+        fieldData.label, 
+        fieldData.value, 
+        'dynamic', 
+        fieldData.unit, 
+        fieldData.options, 
+        (newUnit) => {
+            this.querySelector(`#unit-${fieldKey}`).setAttribute('value', newUnit);
+            this.data[fieldKey].unit = newUnit;
+            progressStore.updateDraft({ [fieldKey]: this.data[fieldKey] });
+        }
+    );
+
+    if (result) {
+        const val = parseFloat(result.value);
+        let esLogico = true;
+
+        // --- VALIDACIÓN DE NÚMEROS LÓGICOS ---
+        if (result.value !== "" && result.value !== "0") {
+            // Validación Peso
+            if (fieldKey === 'weight') {
+                if (result.unit === 'KG' && (val < 20 || val > 500)) esLogico = false;
+                if (result.unit === 'LB' && (val < 45 || val > 1100)) esLogico = false;
+                if (result.unit === 'ST' && (val < 3 || val > 80)) esLogico = false;
+            }
+            // Validación Altura (en esta pantalla se usan METROS)
+            if (fieldKey === 'height') {
+                if (result.unit === 'M' && (val < 0.5 || val > 2.5)) esLogico = false;
+                if (result.unit === 'FT' && (val < 1.6 || val > 8.2)) esLogico = false;
+            }
+            // Validación Grasa Corporal
+            if (fieldKey === 'fat' && (val < 2 || val > 75)) esLogico = false;
+            
+            // Validación Masa Muscular
+            if (fieldKey === 'muscle') {
+                if (result.unit === '%' && (val < 5 || val > 95)) esLogico = false;
+                if (result.unit === 'KG' && (val < 5 || val > 400)) esLogico = false;
+            }
+        }
+
+        // Si pasa la validación, guardamos el dato
+        if (esLogico) {
+            const cleanValue = (result.value === "0" || result.value === "") ? "" : result.value;
+            this.data[fieldKey].value = cleanValue;
+            this.data[fieldKey].unit = result.unit;
+            progressStore.updateDraft({ [fieldKey]: this.data[fieldKey] });
+            this._updateUI();
+            this._checkCanSave();
+        }
+    }
+}
+
+_updateUI() {
+    Object.keys(this.data).forEach(key => {
+        if (key === 'photo') return;
+        const field = this.data[key];
+        const valSpan = this.querySelector(`#val-${key}`);
+        const unitToggle = this.querySelector(`#unit-${key}`);
+        
+        if (valSpan) {
+            valSpan.innerText = field.value !== "" ? field.value : "0";
+            valSpan.style.opacity = field.value !== "" ? "1" : "0.3";
+        }
+        if (unitToggle) {
+            unitToggle.setAttribute('options', field.options);
+            unitToggle.setAttribute('value', field.unit);
+        }
+    });
+
+    const uploadBox = this.querySelector('#upload-box');
+    if (uploadBox) {
+        if (this.data.photo.value) {
+            uploadBox.classList.add('has-image');
+            uploadBox.innerHTML = `<img src="${this.data.photo.value}" class="photo-preview" alt="Preview">`;
+        } else {
+            uploadBox.classList.remove('has-image');
+            uploadBox.innerHTML = `
+                <div class="upload-icon">${ICONS.UPLOAD_CLOUD}</div>
+                <h3 class="upload-title">${this.dict.t('record_add_photo_title')}</h3>
+                <p class="upload-desc">${this.dict.t('record_add_photo_desc')}</p>
+            `;
+        }
+    }
+}
 _checkCanSave(){const draft=progressStore.getDraft();let hasValidData=false;for(const key in draft){const item=draft[key];if(item&&key!=='photo'&&item.value!==""&&parseFloat(item.value)>0){hasValidData=true;break;}
 if(key==='photo'&&item&&item.value){hasValidData=true;break;}}
 const btnSave=this.querySelector('#btn-save');if(btnSave){if(hasValidData){btnSave.removeAttribute('disabled');}else{btnSave.setAttribute('disabled','true');}}}

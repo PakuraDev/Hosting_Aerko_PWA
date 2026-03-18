@@ -199,13 +199,135 @@ render(){const needsProfileData=!this.age||!this.gender;this.innerHTML=`
                 </footer>
             </div>
         `;}
-_attachListeners(){const modal=this.querySelector('#modal-keypad');this.querySelector('#box-age')?.addEventListener('click',async()=>{const current=this.age||25;const result=await modal.open(this.dict.t('calc_lbl_age'),current,'numeric');if(result&&result.value){this.age=parseInt(result.value);const span=this.querySelector('#val-age');span.innerText=this.age;span.classList.remove('placeholder-text');await userService.updateBiometrics({age:this.age});}});this.querySelector('#box-gender')?.addEventListener('click',async()=>{this.gender=this.gender==='M'?'F':'M';const span=this.querySelector('#val-gender');span.innerText=this.gender==='M'?this.dict.t('calc_gender_m'):this.dict.t('calc_gender_f');span.classList.remove('placeholder-text');await userService.updateBiometrics({gender:this.gender});});Object.keys(this.folds).forEach(key=>{const box=this.querySelector(`#box-${key}`);if(box){box.addEventListener('click',async()=>{const result=await modal.open(this.foldLabels[key],this.folds[key],'numeric');if(result){const cleanVal=(result.value==="0"||result.value==="")?"":result.value;this.folds[key]=cleanVal;const span=this.querySelector(`#val-${key}`);span.innerText=cleanVal!==""?cleanVal:"0";if(cleanVal!=="")span.classList.remove('placeholder-text');else span.classList.add('placeholder-text');}});}});this.querySelector('#btn-calc')?.addEventListener('click',()=>{this._calculateFat();});}
-_calculateFat(){if(!this.age||!this.gender){this.usedFormula=this.dict.t('calc_formula_err_data');this.resultFat=0;this._updateResultsUI();return;}
-const p=parseFloat(this.folds.pectoral)||0;const ab=parseFloat(this.folds.abdominal)||0;const th=parseFloat(this.folds.quadriceps_fold)||0;const tr=parseFloat(this.folds.triceps_fold)||0;const sub=parseFloat(this.folds.subscapular)||0;const sup=parseFloat(this.folds.suprailiac)||0;const mid=parseFloat(this.folds.midaxillary)||0;const isMale=this.gender==='M';const has7=(p>0&&ab>0&&th>0&&tr>0&&sub>0&&sup>0&&mid>0);const hasMale3=(p>0&&ab>0&&th>0);const hasFemale3=(tr>0&&sup>0&&th>0);let bodyDensity=0;this.usedFormula=this.dict.t('calc_formula_err_folds');if(has7){const sum7=p+ab+th+tr+sub+sup+mid;this.usedFormula=this.dict.t('calc_formula_jp7');if(isMale){bodyDensity=1.112-(0.00043499*sum7)+(0.00000055*sum7*sum7)-(0.00028826*this.age);}else{bodyDensity=1.097-(0.00046971*sum7)+(0.00000056*sum7*sum7)-(0.00012828*this.age);}}
-else{if(isMale&&hasMale3){const sum3=p+ab+th;this.usedFormula=this.dict.t('calc_formula_jp3');bodyDensity=1.10938-(0.0008267*sum3)+(0.0000016*sum3*sum3)-(0.0002574*this.age);}
-else if(!isMale&&hasFemale3){const sum3=tr+sup+th;this.usedFormula='Jackson-Pollock 3';bodyDensity=1.0994921-(0.0009929*sum3)+(0.0000023*sum3*sum3)-(0.0001392*this.age);}}
-if(bodyDensity>0){let fatPercent=(495/bodyDensity)-450;fatPercent=Math.max(2,Math.min(70,fatPercent));this.resultFat=Math.round(fatPercent*10)/10;progressStore.updateDraft({fat:{value:this.resultFat.toString(),unit:'%'}});}else{this.resultFat=0;}
-this._updateResultsUI();}
+_attachListeners() {
+    const modal = this.querySelector('#modal-keypad');
+
+    // 1. Input de Edad con límite lógico
+    this.querySelector('#box-age')?.addEventListener('click', async () => {
+        const current = this.age || 25;
+        const result = await modal.open(this.dict.t('calc_lbl_age'), current.toString(), 'numeric');
+        
+        if (result && result.value) {
+            const valorEdad = parseInt(result.value);
+            // Límite lógico: entre 1 y 110 años
+            if (valorEdad >= 1 && valorEdad <= 110) {
+                this.age = valorEdad;
+                const span = this.querySelector('#val-age');
+                span.innerText = this.age;
+                span.classList.remove('placeholder-text');
+                
+                const { userService } = await import('../../user/services/user.service.js');
+                await userService.updateBiometrics({ age: this.age });
+            }
+        }
+    });
+
+    // 2. Selector de Género
+    this.querySelector('#box-gender')?.addEventListener('click', async () => {
+        this.gender = this.gender === 'M' ? 'F' : 'M';
+        const span = this.querySelector('#val-gender');
+        span.innerText = this.gender === 'M' ? this.dict.t('calc_gender_m') : this.dict.t('calc_gender_f');
+        span.classList.remove('placeholder-text');
+        
+        const { userService } = await import('../../user/services/user.service.js');
+        await userService.updateBiometrics({ gender: this.gender });
+    });
+
+    // 3. Inputs de Pliegues (Folds) con límite lógico
+    Object.keys(this.folds).forEach(key => {
+        const box = this.querySelector(`#box-${key}`);
+        if (box) {
+            box.addEventListener('click', async () => {
+                const result = await modal.open(this.foldLabels[key], this.folds[key], 'numeric');
+                if (result) {
+                    const valPliegue = parseFloat(result.value);
+                    // Límite lógico: 1mm a 100mm (o permitir borrarlo dejándolo vacío)
+                    const esValido = (result.value === "" || (valPliegue >= 1 && valPliegue <= 100));
+                    
+                    if (esValido) {
+                        const cleanVal = (result.value === "0" || result.value === "") ? "" : result.value;
+                        this.folds[key] = cleanVal;
+                        const span = this.querySelector(`#val-${key}`);
+                        span.innerText = cleanVal !== "" ? cleanVal : "0";
+                        
+                        if (cleanVal !== "") span.classList.remove('placeholder-text');
+                        else span.classList.add('placeholder-text');
+                    }
+                }
+            });
+        }
+    });
+
+    // 4. Botón de calcular
+    this.querySelector('#btn-calc')?.addEventListener('click', () => {
+        this._calculateFat();
+    });
+}
+
+_calculateFat() {
+    // Verificar que existan los datos básicos
+    if (!this.age || !this.gender) {
+        this.usedFormula = this.dict.t('calc_formula_err_data');
+        this.resultFat = 0;
+        this._updateResultsUI();
+        return;
+    }
+
+    // Obtener valores de pliegues
+    const p = parseFloat(this.folds.pectoral) || 0;
+    const ab = parseFloat(this.folds.abdominal) || 0;
+    const th = parseFloat(this.folds.quadriceps_fold) || 0;
+    const tr = parseFloat(this.folds.triceps_fold) || 0;
+    const sub = parseFloat(this.folds.subscapular) || 0;
+    const sup = parseFloat(this.folds.suprailiac) || 0;
+    const mid = parseFloat(this.folds.midaxillary) || 0;
+
+    const isMale = this.gender === 'M';
+    const has7 = (p > 0 && ab > 0 && th > 0 && tr > 0 && sub > 0 && sup > 0 && mid > 0);
+    const hasMale3 = (p > 0 && ab > 0 && th > 0);
+    const hasFemale3 = (tr > 0 && sup > 0 && th > 0);
+
+    let bodyDensity = 0;
+    this.usedFormula = this.dict.t('calc_formula_err_folds');
+
+    // Jackson-Pollock 7 Pliegues
+    if (has7) {
+        const sum7 = p + ab + th + tr + sub + sup + mid;
+        this.usedFormula = this.dict.t('calc_formula_jp7');
+        if (isMale) {
+            bodyDensity = 1.112 - (0.00043499 * sum7) + (0.00000055 * sum7 * sum7) - (0.00028826 * this.age);
+        } else {
+            bodyDensity = 1.097 - (0.00046971 * sum7) + (0.00000056 * sum7 * sum7) - (0.00012828 * this.age);
+        }
+    } 
+    // Jackson-Pollock 3 Pliegues
+    else {
+        if (isMale && hasMale3) {
+            const sum3 = p + ab + th;
+            this.usedFormula = this.dict.t('calc_formula_jp3');
+            bodyDensity = 1.10938 - (0.0008267 * sum3) + (0.0000016 * sum3 * sum3) - (0.0002574 * this.age);
+        } else if (!isMale && hasFemale3) {
+            const sum3 = tr + sup + th;
+            this.usedFormula = 'Jackson-Pollock 3';
+            bodyDensity = 1.0994921 - (0.0009929 * sum3) + (0.0000023 * sum3 * sum3) - (0.0001392 * this.age);
+        }
+    }
+
+    // Calcular Porcentaje Final (Siri Equation)
+    if (bodyDensity > 0) {
+        let fatPercent = (495 / bodyDensity) - 450;
+        // Límite de seguridad para el resultado (2% a 70%)
+        fatPercent = Math.max(2, Math.min(70, fatPercent));
+        this.resultFat = Math.round(fatPercent * 10) / 10;
+        
+        // Actualizar el borrador global
+        progressStore.updateDraft({ fat: { value: this.resultFat.toString(), unit: '%' } });
+    } else {
+        this.resultFat = 0;
+    }
+
+    this._updateResultsUI();
+}
 _updateResultsUI(){const valSpan=this.querySelector('#ui-fat-val');const formulaSpan=this.querySelector('#ui-formula-val');const panel=this.querySelector('.result-panel');if(valSpan){valSpan.innerHTML=`${this.resultFat > 0 ? this.resultFat : '--'}<span style="font-size:0.6em; margin-left:4px;">%</span>`;}
 if(formulaSpan){formulaSpan.innerText=`${this.dict.t('calc_lbl_algorithm')} ${this.usedFormula}`;formulaSpan.style.color=this.resultFat>0?'var(--Verde-acido)':'#FF7E4F';}
 if(panel){panel.style.transition='opacity 0.1s';panel.style.opacity='0.5';setTimeout(()=>panel.style.opacity='1',150);}}}
